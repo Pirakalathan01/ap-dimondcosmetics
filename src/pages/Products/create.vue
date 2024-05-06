@@ -1,0 +1,110 @@
+<script setup>
+import {onMounted, reactive, ref, toRefs} from "vue";
+import { helpers, required } from "@vuelidate/validators";
+import { useVuelidate } from "@vuelidate/core";
+import Form from "./form.vue";
+import { useRouter } from "vue-router";
+import useCategories from "../../composables/categories.js";
+import useProducts from "../../composables/products.js";
+
+const {errors, storeProduct } = useProducts();
+const {categories, getAllCategories } = useCategories();
+const router = useRouter();
+const $externalResults = reactive({});
+const isLoading = ref(false);
+
+const rules = {
+
+  name: {
+    required: helpers.withMessage("The name field is required", required),
+  },
+  category_id: {
+    required: helpers.withMessage("The category field is required", required),
+  },
+  description: {
+    required: helpers.withMessage("The description field is required", required),
+  },
+  directions: {
+    required: helpers.withMessage("The directions field is required", required),
+  },
+  price: {
+    required: helpers.withMessage("The price field is required", required),
+  },
+  in_stock: {
+    required: helpers.withMessage("The stock field is required", required),
+  },
+  product_image: {
+    required: helpers.withMessage("The product image field is required", required),
+  },
+
+};
+
+const createData = reactive({
+  name: "",
+  category_id: "",
+  description: "",
+  directions: "",
+  price: "",
+  in_stock: "",
+  product_image: null,
+});
+
+const validate = useVuelidate(rules, toRefs(createData), { $externalResults });
+
+
+const handleStoreProduct = async (data, validate) => {
+  validate.$touch();
+  if (!validate.$invalid) {
+    try {
+      isLoading.value = true;
+      await storeProduct(data);
+      if (errors) {
+        Object.assign($externalResults, errors.value);
+      }
+      // await router.push({ name:'courses' })
+      isLoading.value = false;
+    } catch (err) {
+      isLoading.value = false;
+    }
+  }
+};
+
+const handleGetAllCategories = async () => {
+  await getAllCategories();
+}
+
+onMounted(async () => {
+  await handleGetAllCategories();
+});
+
+</script>
+<template>
+  <div class="px-4 sm:px-6 lg:px-8">
+    <div class="sm:flex sm:items-center">
+      <div class="sm:flex-auto">
+        <h1 class="text-xl font-semibold text-gray-900">Create Product</h1>
+        <p class="mt-2 text-sm text-gray-700"> Create needed products</p>
+      </div>
+      <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+        <router-link :to="{ name: 'products'}">
+          <button type="button"
+                  class="inline-flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:w-auto">
+            Go Back
+          </button>
+        </router-link>
+      </div>
+    </div>
+    <Form
+        v-if="categories.length"
+        :data="createData"
+        :categories="categories"
+        :loading="isLoading"
+        :validate="validate"
+        @save-data="handleStoreProduct"
+    />
+  </div>
+
+</template>
+
+
+
